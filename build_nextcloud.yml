@@ -1,0 +1,184 @@
+
+---
+
+- hosts: localhost
+
+  vars:
+     nextcloud_dir:       /var/www/html/nextcloud
+     data_dir:            /var/nextcloud/data
+     database:            "{{ DATABASE | default('sqlite') }}"
+     mysql_root_password: '{{ MYSQL_ROOT_PASSWORD }}'
+     ncuser_password:     '{{ NCUSER_PASSWORD }}'
+
+
+  tasks:
+
+     - name: Install Apache
+       apt:
+          name: apache2
+          state: present
+          update_cache: yes
+
+
+     #######################################################
+     # Install MySQL and associated packages, if required
+     #######################################################
+
+     - name: Install MySQL and associated packages for Raspbian Buster
+       apt:
+          pkg:
+             - mariadb-server
+             - python-mysqldb
+             - php-mysql
+          state: present
+       when: database == 'mysql' and ansible_distribution_release == 'buster'
+
+     - name: Install MySQL and associated packages for Raspbian Stretch
+       apt:
+          pkg:
+             - mysql-server
+             - python-mysqldb
+             - php7.0-mysql
+          state: present
+       when: database == 'mysql' and ansible_distribution_release == 'stretch'
+
+     - name: Install MySQL and associated packages for Raspbian Jessie
+       apt:
+          pkg:
+             - mysql-server
+             - python-mysqldb
+             - php5-mysql
+          state: present
+       when: database == 'mysql' and ansible_distribution_release == 'jessie'
+
+
+
+     #######################################################
+     # Configure MySQL, if required
+     #######################################################
+
+     - name: Set the MySQL root password 
+       mysql_user: 
+          user: root 
+          password: '{{ mysql_root_password }}'
+          host: localhost
+       when: database == 'mysql'
+
+     - name: Create MySQL database
+       mysql_db:
+          login_user: root
+          login_password: '{{ mysql_root_password }}'
+          name: nextcloud
+          state: present
+       when: database == 'mysql'
+
+     - name: Create MySQL admin user
+       mysql_user:
+          login_user: root
+          login_password: '{{ mysql_root_password }}'
+          name: ncuser
+          password: '{{ ncuser_password }}'
+          priv: '*.*:ALL,GRANT'
+          state: present
+       when: database == 'mysql'
+
+
+
+
+     ###################################################
+     # Install php packages required by Nextcloud
+     ###################################################
+
+     - name: Install php 7.3 packages for Raspbian Buster
+       apt:
+          pkg:
+             - php
+             - php-gd
+             - sqlite
+             - php-sqlite3
+             - php-curl
+             - php-zip
+             - php-xml
+             - php-mbstring
+             - libapache2-mod-php
+          state: present
+       when: ansible_distribution_release == 'buster'
+
+     - name: Install php 7.0 packages for Raspbian Stretch
+       apt:
+          pkg:
+             - php7.0
+             - php7.0-gd
+             - php7.0-sqlite3
+             - php7.0-curl
+             - php7.0-zip
+             - php7.0-xml
+             - php7.0-mbstring
+             - libapache2-mod-php7.0
+          state: present
+       when: ansible_distribution_release == 'stretch'
+
+     - name: Install php 5 packages for Raspbian Jessie
+       apt:
+          pkg:
+             - php5
+             - php5-gd
+             - php5-sqlite
+             - php5-curl
+          state: present
+       when: ansible_distribution_release == 'jessie'
+
+
+
+
+     ###################################################
+     # Install and configure Nextcloud
+     ###################################################
+
+
+     - name: Download Nextcloud 17.0.1 (for Buster)
+       get_url:
+          #url: https://download.nextcloud.com/server/releases/latest.zip
+          url: https://download.nextcloud.com/server/releases/nextcloud-17.0.1.zip
+          dest: /tmp/nextcloud.zip
+       when: ansible_distribution_release == 'buster'
+
+     - name: Download the latest version of Nextcloud 15 (for Stretch/Jessie)
+       get_url:
+          url: https://download.nextcloud.com/server/releases/latest-15.zip
+          dest: /tmp/nextcloud.zip
+       when: ansible_distribution_release == 'stretch' or ansible_distribution_release == "jessie"
+
+     - name: Unzip Nextcloud
+       unarchive:
+          src: /tmp/nextcloud.zip
+          dest: '{{nextcloud_dir | dirname}}'
+          remote_src: yes
+
+
+     - name: Create data directory '{{data_dir}}'
+       file:
+          path: '{{data_dir}}'
+          state: directory
+          owner: www-data
+          group: www-data
+          mode: 0750
+          recurse: yes
+
+     - name: Set Nextcloud directory ownerships
+       file:
+          path: '{{nextcloud_dir}}/{{item}}'
+          owner: www-data
+          group: www-data
+       with_items:
+          - config
+          - apps
+
+
+     - name: Restart Apache
+       service:
+          name: apache2
+          state: restarted
+          enabled: yes
+
+
