@@ -139,13 +139,13 @@
      - name: Download Nextcloud 17.0.1 (for Buster)
        get_url:
           #url: https://download.nextcloud.com/server/releases/latest.zip
-          url: https://download.nextcloud.com/server/releases/nextcloud-17.0.1.zip
+          url: http://download.nextcloud.com/server/releases/nextcloud-17.0.1.zip
           dest: /tmp/nextcloud.zip
        when: ansible_distribution_release == 'buster'
 
      - name: Download the latest version of Nextcloud 15 (for Stretch/Jessie)
        get_url:
-          url: https://download.nextcloud.com/server/releases/latest-15.zip
+          url: http://download.nextcloud.com/server/releases/latest-15.zip
           dest: /tmp/nextcloud.zip
        when: ansible_distribution_release == 'stretch' or ansible_distribution_release == "jessie"
 
