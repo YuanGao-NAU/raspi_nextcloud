@@ -134,27 +134,24 @@
      ###################################################
      # Install and configure Nextcloud
      ###################################################
-
-
-     - name: Download Nextcloud 17.0.1 (for Buster)
-       get_url:
-          #url: https://download.nextcloud.com/server/releases/latest.zip
-          url: http://download.nextcloud.com/server/releases/nextcloud-17.0.1.zip
+     - name: copy file for Buster
+       copy:
+          src: ./nextcloud-17.0.1.zip
           dest: /tmp/nextcloud.zip
        when: ansible_distribution_release == 'buster'
 
-     - name: Download the latest version of Nextcloud 15 (for Stretch/Jessie)
-       get_url:
-          url: http://download.nextcloud.com/server/releases/latest-15.zip
+     - name: copy file for Stretch/Jessie
+       copy:
+          src: ./latest-15.zip
           dest: /tmp/nextcloud.zip
        when: ansible_distribution_release == 'stretch' or ansible_distribution_release == "jessie"
+
 
      - name: Unzip Nextcloud
        unarchive:
           src: /tmp/nextcloud.zip
           dest: '{{nextcloud_dir | dirname}}'
           remote_src: yes
-
 
      - name: Create data directory '{{data_dir}}'
        file:
